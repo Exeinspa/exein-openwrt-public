@@ -70,3 +70,42 @@ sudo qemu-system-arm -M virt -nographic -smp 1 -kernel bin/targets/armvirt-exein
 # tf-exein 857594974 /etc/exein/config-13107.ini /etc/exein/model-13107.tflite
 ```
 
+## Test an Exein protected application
+
+To make you taste how an Exein protected application performs, this repo has been equipped with the OpenWrt HTTP server behavior model.  
+
+Worth to note that the HTTP root directory also includes a trojan CGI-script located at `http://192.168.1.1/cgi-bin/vuln.cgi` which lets an attacker obtain a reverse shell to `TCP:192.168.1.2:4919`.  
+
+During the test you should observe that regular traffic to the server is allowed, whereas the anomal behavior of an HTTP server instance acting as a shell is detected and terminated.  
+
+Looking at the MLEPlayer output, you should see something like the following:
+
+```
+Starting Exein monitoring for tag: 13107
+libexnl staring up
+Now checking pid 835
+INFO: Initialized TensorFlow Lite runtime.
+Now checking pid 4432
+Now checking pid 4438
+Removing pid 4432
+Now checking pid 4463
+Removing pid 4463
+Now checking pid 4481
+Block process: 4438
+Removing pid 4438
+Removing pid 4481
+```
+
+Here's a brief description of most meaningful parts:  
+
+- The first line __Starting Exein monitoring for tag: 13107__ indicates that the MLEPlayer instance is watching at the tag 13107, the tag assigned to the HTTP server.  
+
+Tags are a central concept of the Exein framework. They act as classifiers and let the Exein framework identify the target processes and their children. 
+Tags are basically 16-bits identifiers that are embedded into executables by adding a section within the ELF header ad are checked every time the executable is ran.
+
+- As traffic to the server starts, one by one, the HTTP server processes are added to the watchlist.
+
+__Now checking pid 835__ notifies the process 835 was added to the watchlist.
+
+- As soon as anomalies are detected, the MLEPlayer acts asking the LSM to take action against the abnormal process (see __Block process: 4438__ message).
+
