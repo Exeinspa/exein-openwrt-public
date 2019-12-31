@@ -9,15 +9,15 @@ The natural position of a piece of software providing **Run-time anomaly detecti
 
 The task of analyzing the system behavior enumerating system's event is divided into three macro functions:
 
-- collecting event at OS level (**LSM Exein**)
-- providing a mean of communication between kernel space  section and the userspace applications (**Exein_interface**)
-- analyzing them using machine learning algorithms (**MLEPlayer**)
+- Collecting event at OS level (**LSM Exein**)
+- Providing a mean of communication between kernel space  section and the userspace applications (**Exein_interface**)
+- Analyzing them using machine learning algorithms (**MLEPlayer**)
 
 The **LSM Exein** is the part of the Exein solution which interfaces with the Linux kernel and exports the system events data to the userspace application module for the analysis. Its main functions are:
 
 - Interfacing with the Linux Kernel
 - Collecting the events flows
-- enforcing policies dictated by the *MLEPlayer*
+- Enforcing policies dictated by the *MLEPlayer*
 
 The **Exein_interface** is the glue that makes it possible for the userspace MLEPlayer to communicate with the *LSM Exein*. It accomplishes this task by defining a new protocol within the Linux Netlink stack. It also provides userspace tools for debugging purposes.
 
@@ -45,25 +45,23 @@ The **MLEPlayer** embodies the following functions:
 
 
 ## Example
-The example shown in this repository represents the porting of the Exein's solution to the Openwrt echo-system.
-Here the specs of this example:
+The example shown in this repository represents the porting of the Exein's solution to the Openwrt ecosystem.
+Exact versions in use are:
 
 - Openwrt 18.06.5
 - Linux Kernel 4.14.151
 
-The repository is done such that users can easily test the solution in an emulated environment.
-
-To test the solution perform the following tasks:
+Users can easily test the solution in an emulated environment by following these steps:
 
  1. Download the repository
- 2. make the config.exein the current openwrt configuration by using __cp config.exein .config__
- 3. run the __make__ utility
- 4. Run with __qemu-system-arm__
+ 2. Make the config.exein the current openwrt configuration by using __cp config.exein .config__
+ 3. Run the __make__ utility
+ 4. Run with __qemu-system-arm__ by issuing the following command
 
 ```
 sudo qemu-system-arm -M virt -nographic -smp 1 -kernel bin/targets/armvirt-exein/32-glibc/openwrt-armvirt-exein-32-zImage-initramfs -append "rootwait root=/dev/vda console=ttyAMA0 loglevel=0 norandmaps" -netdev tap,ifname=tap0,id=eth0 -device virtio-net-device,netdev=eth0
 ```
-5. after system has started, run the command for activating the MLEPlayer
+5. After the system has started, activate the MLEPlayer by issuing the following
 
 ```
 # dmesg |grep Exein
