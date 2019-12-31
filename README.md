@@ -3,7 +3,7 @@
 
 Exein's framework goal is to accomplish the tasks of protecting the target system from undesirable behavior, introducing the self-protecting and remote-monitoring set of tools into the embedded systems arena.
 
-![alt splash](./imas/splash.jpg "Splash")
+![alt splash](/imas/splash.jpg "Splash")
 
 The natural position of a piece of software providing **Run-time anomaly detection** features is within the Linux kernel using the Linux Security Module ecosystem.
 
@@ -30,7 +30,7 @@ The **MLEPlayer** embodies the following function:
 - Triggers the machine learning algorithm on the supplied data
 
 
-![alt design](./imas/exein.png "Components")
+![alt design](/imas/exein.png "Components")
 
 
 ## User space
