@@ -1,0 +1,429 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+new file mode 100644
+index 0000000000..df32968a7e
+--- /dev/null
++++ b/CMakeLists.txt
+@@ -0,0 +1,103 @@
++cmake_minimum_required(VERSION 3.6)
++project(tensorflow-lite)
++set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
++INCLUDE(ProtoBuf)
++INCLUDE(ProtoText)
++
++include_directories(${CMAKE_CURRENT_SOURCE_DIR})
++include_directories(${CMAKE_CURRENT_BINARY_DIR})
++
++file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/tensorflow/contrib/makefile/tf_pb_text_files.txt CORE_PB_TEXT)
++#string(REGEX REPLACE ".pb_text.cc" ".proto" CORE_PB_TEXT "${CORE_PB_TEXT}") # list(TRANSFORM CORE_PB_TEXT REPLACE ".pb_text.cc" ".proto")
++file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/tensorflow/contrib/makefile/tf_proto_files.txt CORE_PB)
++list(APPEND CORE_PB tensorflow/core/protobuf/master.proto
++                    tensorflow/core/protobuf/worker.proto
++                    tensorflow/core/protobuf/transport_options.proto
++)
++file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/tensorflow/contrib/makefile/proto_text_cc_files.txt PB_TEXT_CC)
++
++if(TFLITE_TESTING OR BUILD_TOOLS)
++  find_package(Protobuf REQUIRED)
++  set(PROTOBUF_IMPORT_DIRS ${PROTOBUF_IMPORT_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
++  PROTOBUF_CPP(CORE_PB_SRC CORE_PB_HEADER ${CORE_PB})
++  if(BUILD_TOOLS)
++    add_executable(proto_text ${CORE_PB_SRC} ${CORE_PB_HEADER} ${PB_TEXT_CC})
++    target_include_directories(proto_text PUBLIC ${SYSROOT}/usr/include/eigen3)
++    target_link_libraries(proto_text ${Protobuf_LIBRARY} z pthread dl
++	    double-conversion nsync nsync_cpp
++	    absl_strings absl_base absl_debugging absl_memory absl_meta absl_str_format absl_numeric absl_algorithm absl_utility absl_any absl_span)
++    install(TARGETS proto_text DESTINATION usr/bin)
++  endif(BUILD_TOOLS)
++endif(TFLITE_TESTING OR BUILD_TOOLS)
++
++if(TFLITE_TYPE)
++  if(TFLITE_TESTING)
++    file(GLOB TMP_CC_SRC tensorflow/cc/framework/scope*.cc tensorflow/cc/framework/scope*.h
++                         tensorflow/cc/framework/ops*.cc tensorflow/cc/framework/ops*.h
++                         tensorflow/cc/training/*.cc tensorflow/cc/training/*.h
++	    )
++    file(GLOB TMP_STREAM_EXECUTOR tensorflow/stream_executor/event.cc tensorflow/stream_executor/event.h
++				  tensorflow/stream_executor/stream_executor_pimpl.cc tensorflow/stream_executor/stream_executor_pimpl.h
++				  tensorflow/stream_executor/stream_executor_internal.cc tensorflow/stream_executor/stream_executor_internal.h
++				  tensorflow/stream_executor/stream.cc tensorflow/stream_executor/stream.h
++				  tensorflow/stream_executor/dnn.cc tensorflow/stream_executor/dnn.h
++				  tensorflow/stream_executor/blas.cc tensorflow/stream_executor/blas.h
++				  tensorflow/stream_executor/plugin.cc tensorflow/stream_executor/plugin.h
++				  tensorflow/stream_executor/device_description.cc tensorflow/stream_executor/device_description.h
++				  tensorflow/stream_executor/multi_platform_manager.cc tensorflow/stream_executor/multi_platform_manager.h
++				  tensorflow/stream_executor/temporary_memory_manager.cc tensorflow/stream_executor/temporary_memory_manager.h
++				  tensorflow/stream_executor/temporary_device_memory.cc tensorflow/stream_executor/temporary_device_memory.h
++				  tensorflow/stream_executor/lib/*.cc tensorflow/stream_executor/lib/*.h
++                                  tensorflow/stream_executor/platform.cc tensorflow/stream_executor/platform.h
++				  tensorflow/stream_executor/platform/*.cc tensorflow/stream_executor/platform/*.h
++				  tensorflow/stream_executor/platform/default/*.cc tensorflow/stream_executor/platform/default/*.h
++	    )
++    file(GLOB TMP_LIB tensorflow/core/lib/*/*.cc tensorflow/core/lib/*/*.h)
++    file(GLOB TMP_COMMON_RUNTIME tensorflow/core/common_runtime/*.cc tensorflow/core/common_runtime/*.h
++	    tensorflow/core/common_runtime/*/*.cc tensorflow/core/common_runtime/*/*.h)
++    file(GLOB TMP_DIST_RUNTIME tensorflow/core/distributed_runtime/*.cc tensorflow/core/distributed_runtime/*.h
++	    tensorflow/core/distributed_runtime/*/*.cc tensorflow/core/distributed_runtime/*/*.h
++	    tensorflow/core/distributed_runtime/rpc/*/*.cc tensorflow/core/distributed_runtime/rpc/*/*.h)
++    file(GLOB TMP_PLATFORM tensorflow/core/platform/*.cc tensorflow/core/platform/*.h
++                           tensorflow/core/platform/default/*.cc tensorflow/core/platform/default/*.h
++                           tensorflow/core/platform/posix/*.cc tensorflow/core/platform/posix/*.h
++	    )
++    file(GLOB TMP_FRAMEWORK tensorflow/core/framework/*.cc tensorflow/core/framework/*.h)
++    file(GLOB TMP_GRAPH tensorflow/core/graph/*.cc tensorflow/core/graph/*.h)
++    file(GLOB TMP_GRAPPLER tensorflow/core/grappler/*.cc tensorflow/core/grappler/*.h
++                           tensorflow/core/grappler/*/*.cc tensorflow/core/grappler/*/*.h
++	    )
++    file(GLOB TMP_UTIL tensorflow/core/util/*.cc tensorflow/core/util/*.h
++                       tensorflow/core/util/rpc/*.cc tensorflow/core/util/rpc/*.h
++	    )
++    list(APPEND CORE_CC_SRC
++      ${TMP_CC_SRC}
++      ${TMP_STREAM_EXECUTOR}
++      ${TMP_LIB}
++      ${TMP_COMMON_RUNTIME}
++      ${TMP_DIST_RUNTIME}
++      ${TMP_PLATFORM}
++      ${TMP_FRAMEWORK}
++      ${TMP_GRAPH}
++      ${TMP_GRAPPLER}
++      ${TMP_UTIL}
++    )
++    list(FILTER CORE_CC_SRC EXCLUDE REGEX .*_test.cc)
++    list(FILTER CORE_CC_SRC EXCLUDE REGEX .*_example.cc)
++    list(FILTER CORE_CC_SRC EXCLUDE REGEX cuda_.*)
++    list(FILTER CORE_CC_SRC EXCLUDE REGEX grpc_tensorflow_server.cc)
++    list(FILTER CORE_CC_SRC EXCLUDE REGEX grpc_testlib_server.cc)
++    list(FILTER CORE_CC_SRC EXCLUDE REGEX trivial_test_graph_input_yielder.cc) #FIXME: array_ops.h
++    set(PROTOBUF_IMPORT_DIRS ${PROTOBUF_IMPORT_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
++    PROTOTEXT_CPP(CORE_PBTEXT_SRC CORE_PBTEXT_HEADER ${CORE_PB_TEXT})
++    add_library(tensorflow-core ${CORE_CC_SRC} ${CORE_PB_HEADER} ${CORE_PB_SRC} ${CORE_PBTEXT_HEADER} ${CORE_PBTEXT_SRC})
++    target_include_directories(tensorflow-core PUBLIC ${SYSROOT}/usr/include/eigen3)
++    set_target_properties(tensorflow-core PROPERTIES LINK_FLAGS "-Wl,--no-undefined")
++    target_link_libraries(tensorflow-core ${Protobuf_LIBRARY} re2
++	    str_format_internal absl_str_format absl_strings absl_hash absl_int128
++	    absl_base nsync_cpp farmhash double-conversion z pthread dl)
++    install(TARGETS tensorflow-core LIBRARY DESTINATION lib)
++    install(DIRECTORY tensorflow/core/lib/jpeg/testdata DESTINATION lib/tensorflow/core/lib/jpeg/)
++  endif(TFLITE_TESTING)
++  add_subdirectory(tensorflow)
++endif(TFLITE_TYPE)
+diff --git a/cmake/ProtoBuf.cmake b/cmake/ProtoBuf.cmake
+new file mode 100644
+index 0000000000..af5bbb806d
+--- /dev/null
++++ b/cmake/ProtoBuf.cmake
+@@ -0,0 +1,66 @@
++# Find the protoc Executable
++find_program(Protobuf_PROTOC_EXECUTABLE
++    NAMES protoc
++    DOC "The Google Protocol Buffers Compiler"
++    PATHS
++    ${Protobuf_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Release
++    ${Protobuf_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Debug
++)
++mark_as_advanced(Protobuf_PROTOC_EXECUTABLE)
++
++function(PROTOBUF_CPP SRCS HDRS)
++  set(PROTO_FILES "${ARGN}")
++  if(NOT PROTO_FILES)
++    message(SEND_ERROR "Error: PROTOBUF_CPP() called without any proto files")
++    return()
++  endif()
++
++  set(_protobuf_include_path -I ${CMAKE_CURRENT_SOURCE_DIR})
++
++  if(DEFINED PROTOBUF_IMPORT_DIRS AND NOT DEFINED Protobuf_IMPORT_DIRS)
++    set(Protobuf_IMPORT_DIRS "${PROTOBUF_IMPORT_DIRS}")
++  endif()
++
++  if(DEFINED Protobuf_IMPORT_DIRS)
++    foreach(DIR ${Protobuf_IMPORT_DIRS})
++      get_filename_component(ABS_PATH ${DIR} ABSOLUTE)
++      list(FIND _protobuf_include_path ${ABS_PATH} _contains_already)
++      if(${_contains_already} EQUAL -1)
++          list(APPEND _protobuf_include_path -I ${ABS_PATH})
++      endif()
++    endforeach()
++  endif()
++
++  set(${SRCS})
++  set(${HDRS})
++
++  foreach(FIL ${PROTO_FILES})
++    get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
++    get_filename_component(FIL_WE ${FIL} NAME_WE)
++    get_filename_component(FIL_DIR ${FIL} DIRECTORY)
++    if(FIL_DIR)
++      set(FIL_WE "${FIL_DIR}/${FIL_WE}")
++    endif()
++    set(_protobuf_protoc_src "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.cc")
++    set(_protobuf_protoc_hdr "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.h")
++    list(APPEND ${SRCS} "${_protobuf_protoc_src}")
++    list(APPEND ${HDRS} "${_protobuf_protoc_hdr}")
++
++    set(_protobuf_protoc_flags "")
++
++    add_custom_command(
++      OUTPUT "${_protobuf_protoc_src}"
++             "${_protobuf_protoc_hdr}"
++      COMMAND  ${Protobuf_PROTOC_EXECUTABLE}
++               "--cpp_out=${DLL_EXPORT_DECL}${CMAKE_CURRENT_BINARY_DIR}"
++               ${_protobuf_protoc_flags}
++               ${_protobuf_include_path} ${FIL}
++      DEPENDS ${ABS_FIL} ${Protobuf_PROTOC_EXECUTABLE}
++      COMMENT "Running C++ protocol buffer compiler on ${FIL}"
++      VERBATIM )
++  endforeach()
++
++  set(${SRCS} "${${SRCS}}" PARENT_SCOPE)
++  set(${HDRS} "${${HDRS}}" PARENT_SCOPE)
++endfunction()
++
+diff --git a/cmake/ProtoText.cmake b/cmake/ProtoText.cmake
+new file mode 100644
+index 0000000000..56f4e6e6e2
+--- /dev/null
++++ b/cmake/ProtoText.cmake
+@@ -0,0 +1,61 @@
++# Find the protoc Executable
++find_program(Proto_text_EXECUTABLE
++    NAMES proto_text
++    DOC "The Google Protocol text Compiler"
++    PATHS
++    ${Prototext_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Release
++    ${Prototext_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Debug
++)
++mark_as_advanced(Proto_text_EXECUTABLE)
++
++function(PROTOTEXT_CPP SRCS HDRS)
++	set(PROTO_FILES "${ARGN}")
++  if(NOT PROTO_FILES)
++    message(SEND_ERROR "Error: PROTOTEXT_CPP() called without any proto files")
++    return()
++  endif()
++
++  set(_prototext_include_path -I ${CMAKE_CURRENT_SOURCE_DIR})
++
++  if(DEFINED PROTOTEXT_IMPORT_DIRS AND NOT DEFINED Prototext_IMPORT_DIRS)
++    set(Prototext_IMPORT_DIRS "${PROTOTEXT_IMPORT_DIRS}")
++  endif()
++
++  if(DEFINED Prototext_IMPORT_DIRS)
++    foreach(DIR ${Prototext_IMPORT_DIRS})
++      get_filename_component(ABS_PATH ${DIR} ABSOLUTE)
++      list(FIND _prototext_include_path ${ABS_PATH} _contains_already)
++      if(${_contains_already} EQUAL -1)
++          list(APPEND _prototext_include_path -I ${ABS_PATH})
++      endif()
++    endforeach()
++  endif()
++
++  set(${SRCS})
++  set(${HDRS})
++
++  foreach(FIL ${PROTO_FILES})
++    get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
++    get_filename_component(FIL_WE ${FIL} NAME_WE)
++    get_filename_component(FIL_DIR ${FIL} DIRECTORY)
++    if(FIL_DIR)
++      set(FIL_WE "${FIL_DIR}/${FIL_WE}")
++    endif()
++    set(_prototext_protoc_src "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb_text.cc")
++    set(_prototext_protoc_hdr "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb_text.h")
++    list(APPEND ${SRCS} "${_prototext_protoc_src}")
++    list(APPEND ${HDRS} "${_prototext_protoc_hdr}")
++
++    add_custom_command(
++      OUTPUT "${_prototext_protoc_src}"
++             "${_prototext_protoc_hdr}"
++      COMMAND  ${Proto_text_EXECUTABLE} ${FIL_DIR} ${FIL_DIR} ${FIL} tensorflow/tools/proto_text/placeholder.txt
++      DEPENDS ${ABS_FIL} ${Proto_text_EXECUTABLE}
++      COMMENT "Running C++ protocol text compiler on ${FIL}"
++      VERBATIM )
++  endforeach()
++
++  set(${SRCS} "${${SRCS}}" PARENT_SCOPE)
++  set(${HDRS} "${${HDRS}}" PARENT_SCOPE)
++endfunction()
++
+diff --git a/tensorflow/CMakeLists.txt b/tensorflow/CMakeLists.txt
+new file mode 100644
+index 0000000000..cc63c8d97c
+--- /dev/null
++++ b/tensorflow/CMakeLists.txt
+@@ -0,0 +1,3 @@
++if(TFLITE_TYPE)
++  add_subdirectory(lite)
++endif(TFLITE_TYPE)
+diff --git a/tensorflow/lite/CMakeLists.txt b/tensorflow/lite/CMakeLists.txt
+new file mode 100644
+index 0000000000..85ae846692
+--- /dev/null
++++ b/tensorflow/lite/CMakeLists.txt
+@@ -0,0 +1,145 @@
++set(TFLITE_INCLUDES "\
++  -I.. \
++  -I../.. \
++  -I${SYSROOT}/${CMAKE_INSTALL_PREFIX}/include \
++  -I${SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/eigen3 \
++  -I${SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/absl \
++  -I${SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/gemmlowp \
++  -I${SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/flatbuffers"
++)
++
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG --std=c++11 ${TFLITE_INCLUDES}")
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -DNDEBUG ${TFLITE_INCLUDES}")
++
++### tensorflow lite library
++
++set(TFLITE_LIBS
++  stdc++
++  pthread
++  m
++  z
++  fftsg
++  farmhash
++  flatbuffers
++  dl
++  atomic
++  rt
++  fft4f2d
++)
++
++
++list(APPEND PROFILER_SRCS
++  profiling/time.cc
++)
++
++file(GLOB TMP
++	*.cc
++	*.c
++	c/*.c
++	core/api/*.cc
++ core/*.cc
++ nnapi/*.cc
++ delegates/nnapi/*.cc
++ experimental/resource_variable/*.cc
++ experimental/ruy/*.cc
++)
++list(APPEND TFLITE_CORE_CC_ALL_SRCS
++  ${TMP}
++)
++
++if(NOT "${TFLITE_TYPE}" STREQUAL "micro")
++  file(GLOB TMP
++	  kernels/*.cc kernels/*.h
++	  kernels/internal/*.cc kernels/internal/*.h
++	  kernels/internal/optimized/*.cc kernels/internal/optimized/*.h
++	  kernels/internal/reference/*.cc kernels/internal/reference/*.h
++  )
++  list(APPEND TFLITE_CORE_CC_ALL_SRCS
++    ${TMP}
++  )
++  if(${TFLITE_TESTING})
++    FILE(GLOB TMP
++	  testing/*.cc testing/*.h
++	  delegates/flex/*.cc  delegates/flex/*.h
++	  schema/builtin_ops_header/*.cc schema/builtin_ops_header/*.h
++  	  profiling/*.cc profiling/*.h
++    )
++    list(APPEND TFLITE_CORE_CC_ALL_SRCS
++      ${TMP}
++    )
++    list(APPEND TFLITE_LIBS
++      tensorflow-core
++    )
++  endif(${TFLITE_TESTING})
++endif(NOT "${TFLITE_TYPE}" STREQUAL "micro")
++
++list(SORT TFLITE_CORE_CC_ALL_SRCS)
++list(REMOVE_DUPLICATES TFLITE_CORE_CC_ALL_SRCS)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX .*_test.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX .*test_.*.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX .*_example.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX .*_android.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX .*_ios.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX ruy/benchmark.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX ruy/test.*.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX ruy/example.*.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX nnapi_implementation_disabled.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX kernels/test_main.cc)
++list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX kernels/subgraph_test_util.h)
++if("${TFLITE_TYPE}" STREQUAL "micro")
++  list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX mmap_allocation.cc)
++  list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX nnapi_delegate.cc)
++  list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX kernels/test_util.cc)
++else("${TFLITE_TYPE}" STREQUAL "micro")
++  list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX mmap_allocation_disabled.cc)
++  list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX nnapi_delegate_disabled.cc)
++  if(NOT ${TFLITE_TESTING})
++    list(FILTER TFLITE_CORE_CC_ALL_SRCS EXCLUDE REGEX kernels/test_util.cc)
++  endif(NOT ${TFLITE_TESTING})
++endif("${TFLITE_TYPE}" STREQUAL "micro")
++set(TF_LITE_CC_SRCS ${TFLITE_CORE_CC_ALL_SRCS})
++
++add_library(tensorflow-lite SHARED ${TF_LITE_CC_SRCS})
++target_link_libraries(tensorflow-lite ${TFLITE_LIBS})
++set_target_properties(tensorflow-lite PROPERTIES LINK_FLAGS "-Wl,--no-undefined")
++install(TARGETS tensorflow-lite
++	LIBRARY DESTINATION lib
++)
++install(DIRECTORY c core delegates nnapi kernels schema DESTINATION include/tensorflow/lite FILES_MATCHING PATTERN "*.h")
++install(DIRECTORY experimental/resource_variable DESTINATION include/tensorflow/lite/experimental FILES_MATCHING PATTERN "*.h")
++file(GLOB TMP *.h)
++install(FILES ${TMP} DESTINATION include/tensorflow/lite)
++if(NOT "${TFLITE_TYPE}" STREQUAL "micro")
++  install(DIRECTORY profiling DESTINATION include/tensorflow/lite FILES_MATCHING PATTERN "*.h")
++  if(${TFLITE_TESTING})
++    install(DIRECTORY testing DESTINATION include/tensorflow/lite FILES_MATCHING PATTERN "*.h")
++  endif(${TFLITE_TESTING})
++endif(NOT "${TFLITE_TYPE}" STREQUAL "micro")
++
++
++#### testing executable
++if(${TFLITE_TESTING})
++  file(GLOB_RECURSE TEST_SRCS . *_test.cc)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /experimental/)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /tools/)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /toco/)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /python/)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /java/)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /models/speech_test.cc)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /models/)
++  list(FILTER TEST_SRCS EXCLUDE REGEX /examples/)
++  #list(FILTER TEST_SRCS EXCLUDE REGEX /testing/)
++  #list(FILTER TEST_SRCS EXCLUDE REGEX /schema/)
++  #list(FILTER TEST_SRCS EXCLUDE REGEX /delegates/)
++  foreach(tst ${TEST_SRCS})
++    string(REGEX REPLACE ".*/tensorflow/lite/" "" tgt ${tst})
++    string(REPLACE "_test.cc" "" tgt ${tgt})
++    string(REPLACE "/" "_" tgt ${tgt})
++    add_executable(${tgt} ${tst})
++    if(${tgt} MATCHES ^profiling_)
++      SET_TARGET_PROPERTIES(${tgt} PROPERTIES COMPILE_FLAGS "-DTFLITE_PROFILING_ENABLED")
++    endif()
++    target_link_libraries(${tgt} tensorflow-lite tensorflow-core)
++    install(TARGETS ${tgt} DESTINATION lib/tensorflow/lite/tests)
++  endforeach(tst)
++endif(${TFLITE_TESTING})
+diff --git a/tensorflow/tools/CMakeLists.txt b/tensorflow/tools/CMakeLists.txt
+new file mode 100644
+index 0000000000..02405a5f4e
+--- /dev/null
++++ b/tensorflow/tools/CMakeLists.txt
+@@ -0,0 +1,7 @@
++cmake_minimum_required(VERSION 3.6)
++project(proto_text)
++
++include_directories(${CMAKE_CURRENT_SOURCE_DIR})
++include_directories(${CMAKE_CURRENT_BINARY_DIR})
++
++add_subdirectory(proto_text)
+diff --git a/tensorflow/tools/proto_text/CMakeLists.txt b/tensorflow/tools/proto_text/CMakeLists.txt
+new file mode 100644
+index 0000000000..bf8f7a0cec
+--- /dev/null
++++ b/tensorflow/tools/proto_text/CMakeLists.txt
+@@ -0,0 +1,2 @@
++file(READ )
++add_library(proto_text ${CORE_FRAMEWORK_PROTO_HEADER} ${CORE_FRAMEWORK_PROTO_SRC})

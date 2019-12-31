@@ -1,0 +1,7 @@
+build
+lib
+bin
+old
+.libexnl.c.swp
+.libexnl.h.swp
+*.swp
