@@ -45,7 +45,7 @@ The **MLEPlayer** embodies the following functions:
 
 
 ## Example
-The example shown in this repository represents the porting of the Exein's solution to the Openwrt ecosystem.
+The example shown in this repository represents the porting of the Exein's solution to the Openwrt ecosystem.  
 Exact versions in use are:
 
 - Openwrt 18.06.5
