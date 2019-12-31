@@ -70,7 +70,9 @@ sudo qemu-system-arm -M virt -nographic -smp 1 -kernel bin/targets/armvirt-exein
 # tf-exein 857594974 /etc/exein/config-13107.ini /etc/exein/model-13107.tflite
 ```
 
-## Test an Exein protected application
+## Test an Exein protected application  
+
+![test-example](/imgs/test-example.gif)  
 
 To make you taste how an Exein protected application performs, this repo has been equipped with the OpenWrt HTTP server behavior model.  
 
