@@ -1,3 +1,8 @@
+# This repository has been moved to 
+# https://github.com/Exein-io/exein-openwrt
+
+
+
 # Exein
 
 
